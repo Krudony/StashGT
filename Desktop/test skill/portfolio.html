@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio - ผลงานของฉัน</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 2rem;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            transition: opacity 0.3s;
+        }
+
+        nav a:hover {
+            opacity: 0.8;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        section {
+            padding: 4rem 0;
+            display: none;
+        }
+
+        section.active {
+            display: block;
+        }
+
+        /* หน้า Home */
+        #home {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            padding: 6rem 2rem;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        #home h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        #home p {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: white;
+            color: #667eea;
+            padding: 1rem 2.5rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        /* หน้า About */
+        #about {
+            background-color: #f8f9fa;
+        }
+
+        #about h2 {
+            color: #667eea;
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+        }
+
+        .about-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .about-content p {
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+
+        .skills {
+            margin-top: 2rem;
+        }
+
+        .skills h3 {
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+
+        .skill-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .skill-item {
+            background: #f0f0f0;
+            padding: 1rem;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        /* หน้า Works */
+        #works {
+            background-color: #fff;
+        }
+
+        #works h2 {
+            color: #667eea;
+            margin-bottom: 3rem;
+            font-size: 2.5rem;
+            text-align: center;
+        }
+
+        .works-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .work-card {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .work-card:hover {
+            transform: translateY(-10px);
+        }
+
+        .work-card-image {
+            height: 200px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 3rem;
+        }
+
+        .work-card-content {
+            padding: 1.5rem;
+        }
+
+        .work-card h3 {
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .work-card p {
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        footer {
+            background: #333;
+            color: white;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 3rem;
+        }
+
+        @media (max-width: 768px) {
+            nav ul {
+                gap: 1rem;
+            }
+
+            #home h1 {
+                font-size: 2rem;
+            }
+
+            nav {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">Portfolio</div>
+            <ul>
+                <li><a href="#" onclick="showSection('home')">หน้าแรก</a></li>
+                <li><a href="#" onclick="showSection('about')">เกี่ยวกับฉัน</a></li>
+                <li><a href="#" onclick="showSection('works')">ผลงาน</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- หน้า Home -->
+    <section id="home" class="active">
+        <div class="container">
+            <h1>ยินดีต้อนรับ</h1>
+            <p>ผลงานและโครงการต่างๆ ของฉัน</p>
+            <a href="#" onclick="showSection('works')" class="cta-button">ดูผลงานของฉัน</a>
+        </div>
+    </section>
+
+    <!-- หน้า About -->
+    <section id="about">
+        <div class="container">
+            <h2>เกี่ยวกับฉัน</h2>
+            <div class="about-content">
+                <p>
+                    สวัสดี ฉันเป็นนักพัฒนาและออกแบบเว็บไซต์ที่มีประสบการณ์หลายปี เชี่ยวชาญในการสร้างเว็บแอปพลิเคชันที่สวยงามและใช้งานได้ดี
+                </p>
+                <p>
+                    ฉันชอบการแก้ไขปัญหาทางเทคนิค และมีความมุ่งมั่นในการสร้างผลิตภัณฑ์ที่ดีที่สุด สนใจในเทคโนโลยีใหม่ๆ และอยากพัฒนาทักษะของตัวเอง
+                </p>
+
+                <div class="skills">
+                    <h3>ทักษะของฉัน</h3>
+                    <div class="skill-list">
+                        <div class="skill-item">HTML & CSS</div>
+                        <div class="skill-item">JavaScript</div>
+                        <div class="skill-item">React</div>
+                        <div class="skill-item">Web Design</div>
+                        <div class="skill-item">UI/UX</div>
+                        <div class="skill-item">Node.js</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- หน้า Works -->
+    <section id="works">
+        <div class="container">
+            <h2>ผลงานของฉัน</h2>
+            <div class="works-grid">
+                <div class="work-card">
+                    <div class="work-card-image">🌐</div>
+                    <div class="work-card-content">
+                        <h3>เว็บไซต์บริษัท</h3>
+                        <p>สร้างเว็บไซต์บริษัทที่ทันสมัยและเหมาะสำหรับธุรกิจขนาดกลาง</p>
+                    </div>
+                </div>
+
+                <div class="work-card">
+                    <div class="work-card-image">📱</div>
+                    <div class="work-card-content">
+                        <h3>แอปพลิเคชันมือถือ</h3>
+                        <p>พัฒนาแอปพลิเคชัน React Native ที่ทำงานบนระบบ iOS และ Android</p>
+                    </div>
+                </div>
+
+                <div class="work-card">
+                    <div class="work-card-image">💼</div>
+                    <div class="work-card-content">
+                        <h3>ระบบจัดการ</h3>
+                        <p>สร้างระบบจัดการข้อมูลที่สมบูรณ์ด้วย Node.js และฐานข้อมูล</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2024 Portfolio. All rights reserved.</p>
+    </footer>
+
+    <script>
+        function showSection(sectionId) {
+            // ซ่อนทุกส่วน
+            const sections = document.querySelectorAll('section');
+            sections.forEach(section => {
+                section.classList.remove('active');
+            });
+
+            // แสดงส่วนที่เลือก
+            document.getElementById(sectionId).classList.add('active');
+
+            // เลื่อนไปด้านบน
+            window.scrollTo(0, 0);
+        }
+    </script>
+</body>
+</html>
