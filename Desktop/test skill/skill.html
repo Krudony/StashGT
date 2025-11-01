@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skills Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+
+        .skill-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .skill-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+            border-color: #667eea;
+        }
+
+        .skill-icon {
+            font-size: 3em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .skill-title {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            color: #333;
+            text-align: center;
+        }
+
+        .skill-description {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+
+        .skill-level {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 10px;
+            transition: width 1s ease;
+        }
+
+        .action-button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: transform 0.3s ease;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .action-button:hover {
+            transform: scale(1.05);
+        }
+
+        .demo-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 40px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .demo-output {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .interactive-controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .input-field {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.8s ease forwards;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .skills-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container fade-in">
+        <header>
+            <h1>🚀 My Skills Krudon</h1>
+            <p class="subtitle">Exploring web development, design, and interactive technologies</p>
+        </header>
+
+        <main>
+            <section class="skills-grid">
+                <article class="skill-card fade-in">
+                    <div class="skill-icon">🌐</div>
+                    <h2 class="skill-title">Web Development</h2>
+                    <p class="skill-description">
+                        Building responsive, modern web applications with HTML5, CSS3, JavaScript, and popular frameworks like React and Vue.js.
+                    </p>
+                    <div class="skill-level">
+                        <span>Proficiency</span>
+                        <span>85%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%" data-target="85"></div>
+                    </div>
+                    <button class="action-button" onclick="showSkillDemo('web')">Try Demo</button>
+                </article>
+
+                <article class="skill-card fade-in">
+                    <div class="skill-icon">🎨</div>
+                    <h2 class="skill-title">UI/UX Design</h2>
+                    <p class="skill-description">
+                        Creating intuitive and beautiful user interfaces with focus on user experience, accessibility, and modern design principles.
+                    </p>
+                    <div class="skill-level">
+                        <span>Proficiency</span>
+                        <span>75%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%" data-target="75"></div>
+                    </div>
+                    <button class="action-button" onclick="showSkillDemo('design')">Try Demo</button>
+                </article>
+
+                <article class="skill-card fade-in">
+                    <div class="skill-icon">⚡</div>
+                    <h2 class="skill-title">Performance Optimization</h2>
+                    <p class="skill-description">
+                        Optimizing web applications for speed, efficiency, and best user experience through code splitting, lazy loading, and caching strategies.
+                    </p>
+                    <div class="skill-level">
+                        <span>Proficiency</span>
+                        <span>80%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%" data-target="80"></div>
+                    </div>
+                    <button class="action-button" onclick="showSkillDemo('performance')">Try Demo</button>
+                </article>
+
+                <article class="skill-card fade-in">
+                    <div class="skill-icon">🔧</div>
+                    <h2 class="skill-title">Backend Development</h2>
+                    <p class="skill-description">
+                        Developing robust server-side applications with Node.js, Python, and database management systems.
+                    </p>
+                    <div class="skill-level">
+                        <span>Proficiency</span>
+                        <span>70%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%" data-target="70"></div>
+                    </div>
+                    <button class="action-button" onclick="showSkillDemo('backend')">Try Demo</button>
+                </article>
+
+                <article class="skill-card fade-in">
+                    <div class="skill-icon">📱</div>
+                    <h2 class="skill-title">Mobile Development</h2>
+                    <p class="skill-description">
+                        Creating cross-platform mobile applications with React Native and Flutter for iOS and Android devices.
+                    </p>
+                    <div class="skill-level">
+                        <span>Proficiency</span>
+                        <span>65%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%" data-target="65"></div>
+                    </div>
+                    <button class="action-button" onclick="showSkillDemo('mobile')">Try Demo</button>
+                </article>
+
+                <article class="skill-card fade-in">
+                    <div class="skill-icon">🤖</div>
+                    <h2 class="skill-title">AI Integration</h2>
+                    <p class="skill-description">
+                        Integrating artificial intelligence and machine learning capabilities into web applications.
+                    </p>
+                    <div class="skill-level">
+                        <span>Proficiency</span>
+                        <span>60%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%" data-target="60"></div>
+                    </div>
+                    <button class="action-button" onclick="showSkillDemo('ai')">Try Demo</button>
+                </article>
+            </section>
+
+            <section class="demo-section">
+                <h2>🎮 Interactive Demo</h2>
+                <div class="interactive-controls">
+                    <input type="text" class="input-field" id="userInput" placeholder="Type something to process...">
+                    <button class="action-button" onclick="processInput()">Process Input</button>
+                    <button class="action-button" onclick="clearDemo()">Clear</button>
+                </div>
+                <div class="demo-output" id="demoOutput">
+                    Welcome to the Skills Demo! Try clicking the "Try Demo" buttons above or type something in the input field to see some magic happen.
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Animate progress bars on page load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const progressBars = document.querySelectorAll('.progress-fill');
+                progressBars.forEach(bar => {
+                    const target = bar.getAttribute('data-target');
+                    bar.style.width = target + '%';
+                });
+            }, 500);
+        });
+
+        // Skill demos
+        const skillDemos = {
+            web: () => {
+                const html = `<div style="padding: 20px; background: #f0f8ff; border-radius: 10px;">
+                    <h3>🌐 Web Development Demo</h3>
+                    <p><strong>Current Time:</strong> ${new Date().toLocaleString()}</p>
+                    <p><strong>Browser Info:</strong> ${navigator.userAgent.split(' ').slice(-2).join(' ')}</p>
+                    <p><strong>Screen Resolution:</strong> ${window.screen.width}x${window.screen.height}</p>
+                    <button onclick="this.parentElement.style.background = '#' + Math.floor(Math.random()*16777215).toString(16)"
+                            style="margin-top: 10px; padding: 5px 15px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        Change Background Color
+                    </button>
+                </div>`;
+                return html;
+            },
+
+            design: () => {
+                const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'];
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                return `<div style="padding: 20px; background: ${randomColor}20; border: 2px solid ${randomColor}; border-radius: 10px; color: #333;">
+                    <h3>🎨 UI/UX Design Demo</h3>
+                    <p>Design Element Generated:</p>
+                    <div style="width: 100%; height: 60px; background: linear-gradient(90deg, ${randomColor}, ${randomColor}40); border-radius: 10px; margin: 15px 0; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                        Dynamic Design Component
+                    </div>
+                    <p>Color Palette: ${randomColor}</p>
+                    <p>Typography: Modern & Clean</p>
+                    <p>Layout: Responsive & Flexible</p>
+                </div>`;
+            },
+
+            performance: () => {
+                const start = performance.now();
+                const items = Array.from({length: 10000}, (_, i) => i).filter(i => i % 2 === 0);
+                const end = performance.now();
+                return `<div style="padding: 20px; background: #e8f5e8; border-radius: 10px;">
+                    <h3>⚡ Performance Demo</h3>
+                    <p><strong>Processing Time:</strong> ${(end - start).toFixed(3)}ms</p>
+                    <p><strong>Items Processed:</strong> ${items.length}</p>
+                    <p><strong>Memory Usage:</strong> ${(performance.memory ? (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(2) + ' MB' : 'N/A')}</p>
+                    <p><strong>Optimization:</strong> ✅ Efficient algorithms implemented</p>
+                    <p><strong>Caching:</strong> ✅ Ready for implementation</p>
+                </div>`;
+            },
+
+            backend: () => {
+                const mockData = {
+                    timestamp: new Date().toISOString(),
+                    status: 'success',
+                    data: ['User authentication', 'Database connection', 'API endpoints', 'Server response'],
+                    response_time: Math.floor(Math.random() * 100) + 'ms'
+                };
+                return `<div style="padding: 20px; background: #f5f5f5; border-radius: 10px; font-family: monospace;">
+                    <h3>🔧 Backend Development Demo</h3>
+                    <pre style="background: #2d3748; color: #e2e8f0; padding: 15px; border-radius: 5px; overflow-x: auto;">
+${JSON.stringify(mockData, null, 2)}
+                    </pre>
+                    <p style="margin-top: 15px;"><strong>Status:</strong> ✅ API simulation successful</p>
+                </div>`;
+            },
+
+            mobile: () => {
+                return `<div style="padding: 20px; background: #fff3cd; border-radius: 10px;">
+                    <h3>📱 Mobile Development Demo</h3>
+                    <div style="border: 2px solid #333; border-radius: 20px; padding: 20px; background: white; max-width: 300px; margin: 0 auto;">
+                        <div style="text-align: center;">
+                            <div style="width: 50px; height: 50px; background: #667eea; border-radius: 10px; margin: 0 auto 10px;"></div>
+                            <p style="font-weight: bold;">Mobile App Screen</p>
+                            <p style="font-size: 12px; color: #666;">Responsive Design</p>
+                            <button style="background: #667eea; color: white; border: none; padding: 8px 16px; border-radius: 5px; margin-top: 10px;">
+                                Touch Interface
+                            </button>
+                        </div>
+                    </div>
+                    <p style="text-align: center; margin-top: 15px;"><strong>Platform:</strong> iOS & Android Compatible</p>
+                </div>`;
+            },
+
+            ai: () => {
+                const responses = [
+                    "AI Processing: Analyzing input patterns...",
+                    "Machine Learning: Training model with 95% accuracy",
+                    "Neural Network: Deep learning simulation complete",
+                    "Natural Language: Understanding your request"
+                ];
+                const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                return `<div style="padding: 20px; background: linear-gradient(135deg, #667eea20, #764ba220); border-radius: 10px;">
+                    <h3>🤖 AI Integration Demo</h3>
+                    <p><strong>Status:</strong> ${randomResponse}</p>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                        <p><strong>AI Insights:</strong></p>
+                        <ul style="margin-left: 20px;">
+                            <li>Pattern recognition: Active</li>
+                            <li>Data analysis: In progress</li>
+                            <li>Prediction accuracy: High</li>
+                            <li>Learning capability: Adaptive</li>
+                        </ul>
+                    </div>
+                    <p><strong>Confidence Level:</strong> ${Math.floor(Math.random() * 30) + 70}%</p>
+                </div>`;
+            }
+        };
+
+        function showSkillDemo(skill) {
+            const output = document.getElementById('demoOutput');
+            output.innerHTML = skillDemos[skill]();
+        }
+
+        function processInput() {
+            const input = document.getElementById('userInput').value.trim();
+            const output = document.getElementById('demoOutput');
+
+            if (!input) {
+                output.innerHTML = '⚠️ Please enter some text to process.';
+                return;
+            }
+
+            const charCount = input.length;
+            const wordCount = input.split(/\s+/).filter(word => word.length > 0).length;
+            const reversed = input.split('').reverse().join('');
+            const uppercase = input.toUpperCase();
+            const encoded = btoa(input);
+
+            output.innerHTML = `<div style="padding: 20px; background: #e3f2fd; border-radius: 10px;">
+                <h3>📊 Input Analysis Results</h3>
+                <p><strong>Original Text:</strong> ${input}</p>
+                <p><strong>Character Count:</strong> ${charCount}</p>
+                <p><strong>Word Count:</strong> ${wordCount}</p>
+                <p><strong>Uppercase:</strong> ${uppercase}</p>
+                <p><strong>Reversed:</strong> ${reversed}</p>
+                <p><strong>Base64 Encoded:</strong> ${encoded}</p>
+                <p style="margin-top: 15px; color: #666;">
+                    <strong>Processing completed at:</strong> ${new Date().toLocaleString()}
+                </p>
+            </div>`;
+        }
+
+        function clearDemo() {
+            document.getElementById('userInput').value = '';
+            document.getElementById('demoOutput').innerHTML = 'Demo cleared. Ready for new input!';
+        }
+
+        // Add enter key support for input field
+        document.getElementById('userInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                processInput();
+            }
+        });
+    </script>
+</body>
+</html>
