@@ -5,7 +5,8 @@ namespace KeyboardTextConverter;
 
 /// <summary>
 /// Main application entry point.
-/// Initializes all components and runs the message loop.
+/// Initializes the hidden main form and runs the message loop.
+/// Updated for Phase 2 to support System Tray and proper UI component lifecycle.
 /// </summary>
 static class Program
 {
@@ -18,30 +19,14 @@ static class Program
 
         try
         {
-            // Load configuration
-            var config = ConfigManager.LoadConfig();
-            Console.WriteLine($"Configuration loaded. Hotkey: {config.Hotkey}");
+            Console.WriteLine("Starting Keyboard Text Converter...");
 
-            // Create components
-            var hotkeyManager = new HotkeyManager();
-            var notificationWindow = new NotificationWindow();
+            // Create and run the hidden main form
+            // This replaces ApplicationContext() to support System Tray components
+            var mainForm = new HiddenMainForm();
+            Application.Run(mainForm);
 
-            // Setup hotkey event handler
-            hotkeyManager.HotkeyPressed += (sender, e) =>
-            {
-                OnHotkeyPressed(hotkeyManager, notificationWindow);
-            };
-
-            // Start listening for hotkey
-            hotkeyManager.StartListening();
-            Console.WriteLine("Hotkey listener started.");
-
-            // Run message pump
-            Application.Run(new ApplicationContext());
-
-            // Cleanup
-            hotkeyManager.Dispose();
-            notificationWindow.Dispose();
+            Console.WriteLine("Application shutdown complete.");
         }
         catch (Exception ex)
         {
@@ -51,60 +36,6 @@ static class Program
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error
             );
-        }
-    }
-
-    /// <summary>
-    /// Handle hotkey press event.
-    /// Gets clipboard, converts, and shows notification.
-    /// </summary>
-    private static void OnHotkeyPressed(HotkeyManager hotkeyManager, NotificationWindow notificationWindow)
-    {
-        try
-        {
-            // Get text from clipboard
-            var originalText = ClipboardHandler.GetText();
-
-            // Check if clipboard is empty
-            if (string.IsNullOrWhiteSpace(originalText))
-            {
-                notificationWindow.ShowEmpty();
-                return;
-            }
-
-            // Convert text
-            var convertedText = ThaiEnglishConverter.Convert(originalText);
-
-            // Check if conversion changed anything
-            if (convertedText == originalText)
-            {
-                notificationWindow.ShowError("No mappable characters found");
-                return;
-            }
-
-            // Update clipboard with converted text
-            if (!ClipboardHandler.SetText(convertedText))
-            {
-                notificationWindow.ShowError("Failed to update clipboard");
-                return;
-            }
-
-            // Show success notification with conversion direction and preview
-            var direction = ThaiEnglishConverter.GetConversionDirection(originalText);
-            string originalPreview = originalText.Length > 15
-                ? originalText.Substring(0, 15) + "..."
-                : originalText;
-            string convertedPreview = convertedText.Length > 15
-                ? convertedText.Substring(0, 15) + "..."
-                : convertedText;
-
-            notificationWindow.ShowSuccess(direction, originalPreview, convertedPreview);
-            Console.WriteLine($"Converted: {originalPreview} → {convertedPreview}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error during conversion: {ex.Message}");
-            notificationWindow.ShowError("Conversion error");
         }
     }
 }

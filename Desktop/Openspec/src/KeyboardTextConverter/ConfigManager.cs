@@ -1,11 +1,13 @@
 using System;
 using System.IO;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 
 namespace KeyboardTextConverter;
 
 /// <summary>
-/// Manages application configuration loading and saving.
+/// Manages application configuration loading and saving with validation.
+/// Updated for Phase 2 to include hotkey validation and error handling.
 /// </summary>
 public class ConfigManager
 {
@@ -94,5 +96,85 @@ public class ConfigManager
     public static string GetConfigPath()
     {
         return CONFIG_FILE;
+    }
+
+    /// <summary>
+    /// Validate hotkey format and return validation result.
+    /// </summary>
+    public static (bool IsValid, string ErrorMessage) ValidateHotkey(string hotkey)
+    {
+        if (string.IsNullOrWhiteSpace(hotkey))
+        {
+            return (false, "Hotkey cannot be empty");
+        }
+
+        // Allow patterns: Ctrl+Shift+Space, Alt+Shift+C, Ctrl+Alt+X, etc.
+        var validPattern = @"^(Ctrl|Alt|Shift)(\+(Ctrl|Alt|Shift))*\+[A-Za-z0-9]$|^(Ctrl|Alt|Shift)(\+(Ctrl|Alt|Shift))*\+Space$";
+
+        if (!Regex.IsMatch(hotkey.Trim(), validPattern, RegexOptions.IgnoreCase))
+        {
+            return (false, $"Invalid hotkey format: '{hotkey}'. Expected format: Ctrl+Shift+Space, Alt+Shift+C, etc.");
+        }
+
+        return (true, string.Empty);
+    }
+
+    /// <summary>
+    /// Validate notification duration.
+    /// </summary>
+    public static (bool IsValid, string ErrorMessage) ValidateNotificationDuration(int duration)
+    {
+        if (duration < 500 || duration > 10000)
+        {
+            return (false, $"Notification duration must be between 500ms and 10000ms (got: {duration})");
+        }
+        return (true, string.Empty);
+    }
+
+    /// <summary>
+    /// Validate entire config object.
+    /// </summary>
+    public static (bool IsValid, string[] Errors) ValidateConfig(Config config)
+    {
+        var errors = new List<string>();
+
+        // Validate hotkey
+        var (hotkeyValid, hotkeyError) = ValidateHotkey(config.Hotkey);
+        if (!hotkeyValid)
+        {
+            errors.Add(hotkeyError);
+        }
+
+        // Validate notification duration
+        var (durationValid, durationError) = ValidateNotificationDuration(config.NotificationDurationMs);
+        if (!durationValid)
+        {
+            errors.Add(durationError);
+        }
+
+        return (errors.Count == 0, errors.ToArray());
+    }
+
+    /// <summary>
+    /// Save configuration with validation.
+    /// </summary>
+    public static (bool Success, string ErrorMessage) SaveConfigValidated(Config config)
+    {
+        try
+        {
+            // Validate config before saving
+            var (isValid, errors) = ValidateConfig(config);
+            if (!isValid)
+            {
+                return (false, $"Configuration validation failed: {string.Join(", ", errors)}");
+            }
+
+            SaveConfig(config);
+            return (true, string.Empty);
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Error saving config: {ex.Message}");
+        }
     }
 }
