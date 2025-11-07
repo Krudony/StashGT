@@ -1,12 +1,15 @@
-import pkg from 'pg';
-const { Pool } = pkg;
+import Database from 'better-sqlite3';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
-});
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const dbPath = path.join(__dirname, '../../data/temple_accounting.db');
 
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
-});
+// Create database connection
+const db = new Database(dbPath);
 
-export default pool;
+// Enable foreign keys
+db.pragma('foreign_keys = ON');
+db.pragma('journal_mode = WAL');
+
+export default db;

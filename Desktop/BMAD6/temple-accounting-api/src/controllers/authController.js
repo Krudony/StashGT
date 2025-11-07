@@ -1,6 +1,6 @@
 import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import pool from '../config/database.js';
+import db from '../config/database.js';
 
 const DEFAULT_CATEGORIES = [
   { name: 'ทำบุญ', type: 'income' },
@@ -23,12 +23,11 @@ export const register = async (c) => {
     }
 
     // Check if user exists
-    const existingUser = await pool.query(
-      'SELECT id FROM users WHERE username = $1 OR email = $2',
-      [username, email]
-    );
+    const existingUser = db.prepare(
+      'SELECT id FROM users WHERE username = ? OR email = ?'
+    ).get(username, email);
 
-    if (existingUser.rows.length > 0) {
+    if (existingUser) {
       return c.json({ error: 'Username or email already exists' }, 400);
     }
 
@@ -36,28 +35,27 @@ export const register = async (c) => {
     const hashedPassword = await bcryptjs.hash(password, 10);
 
     // Insert user
-    const userResult = await pool.query(
-      'INSERT INTO users (username, email, password, temple_name) VALUES ($1, $2, $3, $4) RETURNING id, username, temple_name, email',
-      [username, email, hashedPassword, temple_name]
+    const stmt = db.prepare(
+      'INSERT INTO users (username, email, password, temple_name) VALUES (?, ?, ?, ?)'
     );
-
-    const user = userResult.rows[0];
+    const result = stmt.run(username, email, hashedPassword, temple_name);
+    const userId = result.lastInsertRowid;
 
     // Create default categories for this user
+    const catStmt = db.prepare(
+      'INSERT INTO categories (user_id, name, type, is_default) VALUES (?, ?, ?, ?)'
+    );
     for (const cat of DEFAULT_CATEGORIES) {
-      await pool.query(
-        'INSERT INTO categories (user_id, name, type, is_default) VALUES ($1, $2, $3, $4)',
-        [user.id, cat.name, cat.type, true]
-      );
+      catStmt.run(userId, cat.name, cat.type, 1);
     }
 
     return c.json({
       message: 'User registered successfully',
       user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        temple_name: user.temple_name
+        id: userId,
+        username: username,
+        email: email,
+        temple_name: temple_name
       }
     }, 201);
   } catch (error) {
@@ -76,16 +74,13 @@ export const login = async (c) => {
     }
 
     // Find user
-    const result = await pool.query(
-      'SELECT id, username, email, temple_name, password FROM users WHERE username = $1',
-      [username]
-    );
+    const user = db.prepare(
+      'SELECT id, username, email, temple_name, password FROM users WHERE username = ?'
+    ).get(username);
 
-    if (result.rows.length === 0) {
+    if (!user) {
       return c.json({ error: 'Invalid credentials' }, 401);
     }
-
-    const user = result.rows[0];
 
     // Verify password
     const isPasswordValid = await bcryptjs.compare(password, user.password);

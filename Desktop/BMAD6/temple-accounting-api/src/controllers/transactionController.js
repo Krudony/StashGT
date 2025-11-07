@@ -1,4 +1,5 @@
-import pool from '../config/database.js';
+import db from '../config/database.js';
+import { dbHelpers } from '../utils/dbHelpers.js';
 
 export const getTransactions = async (c) => {
   try {
@@ -7,36 +8,8 @@ export const getTransactions = async (c) => {
     const categoryId = c.req.query('category');
     const type = c.req.query('type');
 
-    let query = `
-      SELECT
-        t.id, t.user_id, t.category_id, t.type, t.amount, t.date,
-        t.description, t.details, t.created_at, t.updated_at,
-        c.name as category_name
-      FROM transactions t
-      JOIN categories c ON t.category_id = c.id
-      WHERE t.user_id = $1
-    `;
-    const params = [userId];
-
-    if (month) {
-      query += ` AND DATE_TRUNC('month', t.date) = $${params.length + 1}`;
-      params.push(`${month}-01`);
-    }
-
-    if (categoryId) {
-      query += ` AND t.category_id = $${params.length + 1}`;
-      params.push(categoryId);
-    }
-
-    if (type) {
-      query += ` AND t.type = $${params.length + 1}`;
-      params.push(type);
-    }
-
-    query += ' ORDER BY t.date DESC, t.created_at DESC';
-
-    const result = await pool.query(query, params);
-    return c.json(result.rows);
+    const transactions = dbHelpers.getTransactions(db, userId, month, categoryId, type);
+    return c.json(transactions);
   } catch (error) {
     console.error('Get transactions error:', error);
     return c.json({ error: error.message }, 500);
@@ -58,23 +31,34 @@ export const createTransaction = async (c) => {
     }
 
     // Verify category belongs to user
-    const categoryCheck = await pool.query(
-      'SELECT id FROM categories WHERE id = $1 AND user_id = $2',
-      [category_id, userId]
-    );
+    const category = db.prepare(
+      'SELECT id FROM categories WHERE id = ? AND user_id = ?'
+    ).get(category_id, userId);
 
-    if (categoryCheck.rows.length === 0) {
+    if (!category) {
       return c.json({ error: 'Category not found' }, 404);
     }
 
-    const result = await pool.query(
-      `INSERT INTO transactions (user_id, category_id, type, amount, date, description, details)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, user_id, category_id, type, amount, date, description, details, created_at, updated_at`,
-      [userId, category_id, type, amount, date, description || null, details || null]
-    );
+    const result = dbHelpers.createTransaction(db, {
+      user_id: userId,
+      category_id,
+      type,
+      amount,
+      date,
+      description,
+      details
+    });
 
-    return c.json(result.rows[0], 201);
+    return c.json({
+      id: result.lastInsertRowid,
+      user_id: userId,
+      category_id,
+      type,
+      amount,
+      date,
+      description,
+      details
+    }, 201);
   } catch (error) {
     console.error('Create transaction error:', error);
     return c.json({ error: error.message }, 500);
@@ -93,34 +77,42 @@ export const updateTransaction = async (c) => {
     }
 
     // Verify transaction belongs to user
-    const transactionCheck = await pool.query(
-      'SELECT id FROM transactions WHERE id = $1 AND user_id = $2',
-      [id, userId]
-    );
+    const transaction = db.prepare(
+      'SELECT id FROM transactions WHERE id = ? AND user_id = ?'
+    ).get(id, userId);
 
-    if (transactionCheck.rows.length === 0) {
+    if (!transaction) {
       return c.json({ error: 'Transaction not found' }, 404);
     }
 
     // Verify category belongs to user
-    const categoryCheck = await pool.query(
-      'SELECT id FROM categories WHERE id = $1 AND user_id = $2',
-      [category_id, userId]
-    );
+    const category = db.prepare(
+      'SELECT id FROM categories WHERE id = ? AND user_id = ?'
+    ).get(category_id, userId);
 
-    if (categoryCheck.rows.length === 0) {
+    if (!category) {
       return c.json({ error: 'Category not found' }, 404);
     }
 
-    const result = await pool.query(
-      `UPDATE transactions
-       SET type = $1, category_id = $2, amount = $3, date = $4, description = $5, details = $6, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $7 AND user_id = $8
-       RETURNING id, user_id, category_id, type, amount, date, description, details, created_at, updated_at`,
-      [type, category_id, amount, date, description || null, details || null, id, userId]
-    );
+    dbHelpers.updateTransaction(db, id, userId, {
+      type,
+      category_id,
+      amount,
+      date,
+      description,
+      details
+    });
 
-    return c.json(result.rows[0]);
+    return c.json({
+      id,
+      user_id: userId,
+      category_id,
+      type,
+      amount,
+      date,
+      description,
+      details
+    });
   } catch (error) {
     console.error('Update transaction error:', error);
     return c.json({ error: error.message }, 500);
@@ -132,12 +124,9 @@ export const deleteTransaction = async (c) => {
     const userId = c.get('userId');
     const id = c.req.param('id');
 
-    const result = await pool.query(
-      'DELETE FROM transactions WHERE id = $1 AND user_id = $2',
-      [id, userId]
-    );
+    const result = dbHelpers.deleteTransaction(db, id, userId);
 
-    if (result.rowCount === 0) {
+    if (result.changes === 0) {
       return c.json({ error: 'Transaction not found' }, 404);
     }
 
