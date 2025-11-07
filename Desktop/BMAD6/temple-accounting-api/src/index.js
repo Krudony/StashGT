@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { serve } from '@hono/node-server';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -47,6 +48,12 @@ app.onError((err, c) => {
 
 // Start server
 const port = process.env.PORT || 3000;
-console.log(`🚀 Server running on http://localhost:${port}`);
+
+serve({
+  fetch: app.fetch,
+  port: port
+}, (info) => {
+  console.log(`🚀 Server running on http://localhost:${info.port}`);
+});
 
 export default app;
