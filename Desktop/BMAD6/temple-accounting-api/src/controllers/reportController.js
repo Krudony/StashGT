@@ -1,4 +1,5 @@
-import pool from '../config/database.js';
+import db from '../config/database.js';
+import { dbHelpers } from '../utils/dbHelpers.js';
 
 export const getSummary = async (c) => {
   try {
@@ -9,48 +10,8 @@ export const getSummary = async (c) => {
       return c.json({ error: 'Month is required (format: YYYY-MM)' }, 400);
     }
 
-    // Get total income
-    const incomeResult = await pool.query(
-      `SELECT SUM(amount) as total FROM transactions
-       WHERE user_id = $1 AND type = 'income'
-       AND DATE_TRUNC('month', date) = $2`,
-      [userId, `${month}-01`]
-    );
-
-    // Get total expense
-    const expenseResult = await pool.query(
-      `SELECT SUM(amount) as total FROM transactions
-       WHERE user_id = $1 AND type = 'expense'
-       AND DATE_TRUNC('month', date) = $2`,
-      [userId, `${month}-01`]
-    );
-
-    // Get by category
-    const byCategoryResult = await pool.query(
-      `SELECT
-        c.id, c.name, c.type,
-        SUM(t.amount) as total,
-        COUNT(t.id) as count
-       FROM transactions t
-       JOIN categories c ON t.category_id = c.id
-       WHERE t.user_id = $1
-       AND DATE_TRUNC('month', t.date) = $2
-       GROUP BY c.id, c.name, c.type
-       ORDER BY c.type, total DESC`,
-      [userId, `${month}-01`]
-    );
-
-    const totalIncome = parseFloat(incomeResult.rows[0]?.total) || 0;
-    const totalExpense = parseFloat(expenseResult.rows[0]?.total) || 0;
-    const balance = totalIncome - totalExpense;
-
-    return c.json({
-      month,
-      total_income: totalIncome,
-      total_expense: totalExpense,
-      balance,
-      by_category: byCategoryResult.rows
-    });
+    const summary = dbHelpers.getSummary(db, userId, month);
+    return c.json(summary);
   } catch (error) {
     console.error('Get summary error:', error);
     return c.json({ error: error.message }, 500);
@@ -67,28 +28,27 @@ export const getDetailedReport = async (c) => {
     }
 
     // Get summary
-    const summaryResult = await pool.query(
-      `SELECT
+    const summaryStmt = db.prepare(`
+      SELECT
         SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as total_income,
         SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as total_expense
        FROM transactions
-       WHERE user_id = $1 AND DATE_TRUNC('month', date) = $2`,
-      [userId, `${month}-01`]
-    );
+       WHERE user_id = ? AND strftime('%Y-%m', date) = ?
+    `);
+    const summary = summaryStmt.get(userId, month);
 
     // Get detailed transactions
-    const transactionsResult = await pool.query(
-      `SELECT
+    const transactionsStmt = db.prepare(`
+      SELECT
         t.id, t.type, t.amount, t.date, t.description, t.details,
         c.name as category_name
        FROM transactions t
        JOIN categories c ON t.category_id = c.id
-       WHERE t.user_id = $1 AND DATE_TRUNC('month', t.date) = $2
-       ORDER BY t.date DESC, t.created_at DESC`,
-      [userId, `${month}-01`]
-    );
+       WHERE t.user_id = ? AND strftime('%Y-%m', t.date) = ?
+       ORDER BY t.date DESC, t.created_at DESC
+    `);
+    const transactions = transactionsStmt.all(userId, month);
 
-    const summary = summaryResult.rows[0];
     const totalIncome = parseFloat(summary.total_income) || 0;
     const totalExpense = parseFloat(summary.total_expense) || 0;
 
@@ -99,7 +59,7 @@ export const getDetailedReport = async (c) => {
         total_expense: totalExpense,
         balance: totalIncome - totalExpense
       },
-      transactions: transactionsResult.rows
+      transactions
     });
   } catch (error) {
     console.error('Get detailed report error:', error);
