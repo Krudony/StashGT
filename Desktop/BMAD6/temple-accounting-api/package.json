@@ -1,0 +1,28 @@
+{
+  "name": "temple-accounting-api",
+  "version": "1.0.0",
+  "description": "Temple Accounting Web Application - Backend API",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "migrate": "node migrations/run.js"
+  },
+  "keywords": ["temple", "accounting", "api"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "hono": "^4.0.0",
+    "pg": "^8.11.0",
+    "dotenv": "^16.3.1",
+    "cors": "^2.8.5",
+    "jsonwebtoken": "^9.1.2",
+    "bcryptjs": "^2.4.3",
+    "pdfkit": "^0.13.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
