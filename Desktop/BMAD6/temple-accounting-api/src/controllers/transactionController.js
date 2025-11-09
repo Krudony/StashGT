@@ -1,5 +1,5 @@
-import db from '../config/database.js';
-import { dbHelpers } from '../utils/dbHelpers.js';
+import { supabase } from '../config/supabase.js';
+import { validateCreateTransaction } from '../utils/validation.js';
 
 export const getTransactions = async (c) => {
   try {
@@ -8,7 +8,59 @@ export const getTransactions = async (c) => {
     const categoryId = c.req.query('category');
     const type = c.req.query('type');
 
-    const transactions = dbHelpers.getTransactions(db, userId, month, categoryId, type);
+    // Build the query
+    let query = supabase
+      .from('transactions')
+      .select(`
+        id, user_id, category_id, type, amount, date,
+        description, details, created_at, updated_at,
+        categories!inner(name)
+      `)
+      .eq('user_id', userId)
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    // Apply filters if provided
+    if (month) {
+      // For PostgreSQL, we need to extract year-month from date
+      // Format: YYYY-MM
+      const startDate = `${month}-01`;
+      const [year, monthNum] = month.split('-');
+      const lastDay = new Date(parseInt(year), parseInt(monthNum), 0).getDate();
+      const endDate = `${month}-${lastDay}`;
+
+      query = query.gte('date', startDate).lte('date', endDate);
+    }
+
+    if (categoryId) {
+      query = query.eq('category_id', categoryId);
+    }
+
+    if (type) {
+      query = query.eq('type', type);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    // Transform the response to match the original format
+    const transactions = data.map(t => ({
+      id: t.id,
+      user_id: t.user_id,
+      category_id: t.category_id,
+      type: t.type,
+      amount: t.amount,
+      date: t.date,
+      description: t.description,
+      details: t.details,
+      created_at: t.created_at,
+      updated_at: t.updated_at,
+      category_name: t.categories.name
+    }));
+
     return c.json(transactions);
   } catch (error) {
     console.error('Get transactions error:', error);
@@ -22,43 +74,51 @@ export const createTransaction = async (c) => {
     const { type, category_id, amount, date, description, details } = await c.req.json();
 
     // Validate input
-    if (!type || !category_id || !amount || !date) {
-      return c.json({ error: 'Missing required fields' }, 400);
-    }
-
-    if (!['income', 'expense'].includes(type)) {
-      return c.json({ error: 'Invalid type' }, 400);
+    const validationErrors = validateCreateTransaction(type, category_id, amount, date, description);
+    if (validationErrors) {
+      return c.json(
+        { error: 'Validation error', details: validationErrors },
+        400
+      );
     }
 
     // Verify category belongs to user
-    const category = db.prepare(
-      'SELECT id FROM categories WHERE id = ? AND user_id = ?'
-    ).get(category_id, userId);
+    const { data: category, error: categoryError } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('id', category_id)
+      .eq('user_id', userId)
+      .single();
 
-    if (!category) {
-      return c.json({ error: 'Category not found' }, 404);
+    if (categoryError || !category) {
+      return c.json(
+        { error: 'Validation error', details: { category_id: 'Category not found' } },
+        404
+      );
     }
 
-    const result = dbHelpers.createTransaction(db, {
+    // Create transaction
+    const transactionData = {
       user_id: userId,
       category_id,
       type,
-      amount,
+      amount: parseFloat(amount),
       date,
-      description,
-      details
-    });
+      description: description || null,
+      details: details || null
+    };
 
-    return c.json({
-      id: result.lastInsertRowid,
-      user_id: userId,
-      category_id,
-      type,
-      amount,
-      date,
-      description,
-      details
-    }, 201);
+    const { data, error } = await supabase
+      .from('transactions')
+      .insert([transactionData])
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return c.json(data, 201);
   } catch (error) {
     console.error('Create transaction error:', error);
     return c.json({ error: error.message }, 500);
@@ -72,47 +132,68 @@ export const updateTransaction = async (c) => {
     const { type, category_id, amount, date, description, details } = await c.req.json();
 
     // Validate input
-    if (!type || !category_id || !amount || !date) {
-      return c.json({ error: 'Missing required fields' }, 400);
+    const validationErrors = validateCreateTransaction(type, category_id, amount, date, description);
+    if (validationErrors) {
+      return c.json(
+        { error: 'Validation error', details: validationErrors },
+        400
+      );
     }
 
     // Verify transaction belongs to user
-    const transaction = db.prepare(
-      'SELECT id FROM transactions WHERE id = ? AND user_id = ?'
-    ).get(id, userId);
+    const { data: transaction, error: transactionError } = await supabase
+      .from('transactions')
+      .select('id')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
 
-    if (!transaction) {
-      return c.json({ error: 'Transaction not found' }, 404);
+    if (transactionError || !transaction) {
+      return c.json(
+        { error: 'Validation error', details: { id: 'Transaction not found' } },
+        404
+      );
     }
 
     // Verify category belongs to user
-    const category = db.prepare(
-      'SELECT id FROM categories WHERE id = ? AND user_id = ?'
-    ).get(category_id, userId);
+    const { data: category, error: categoryError } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('id', category_id)
+      .eq('user_id', userId)
+      .single();
 
-    if (!category) {
-      return c.json({ error: 'Category not found' }, 404);
+    if (categoryError || !category) {
+      return c.json(
+        { error: 'Validation error', details: { category_id: 'Category not found' } },
+        404
+      );
     }
 
-    dbHelpers.updateTransaction(db, id, userId, {
+    // Update transaction
+    const updateData = {
       type,
       category_id,
-      amount,
+      amount: parseFloat(amount),
       date,
-      description,
-      details
-    });
+      description: description || null,
+      details: details || null,
+      updated_at: new Date().toISOString()
+    };
 
-    return c.json({
-      id,
-      user_id: userId,
-      category_id,
-      type,
-      amount,
-      date,
-      description,
-      details
-    });
+    const { data, error } = await supabase
+      .from('transactions')
+      .update(updateData)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return c.json(data);
   } catch (error) {
     console.error('Update transaction error:', error);
     return c.json({ error: error.message }, 500);
@@ -124,9 +205,18 @@ export const deleteTransaction = async (c) => {
     const userId = c.get('userId');
     const id = c.req.param('id');
 
-    const result = dbHelpers.deleteTransaction(db, id, userId);
+    const { data, error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select();
 
-    if (result.changes === 0) {
+    if (error) {
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
       return c.json({ error: 'Transaction not found' }, 404);
     }
 

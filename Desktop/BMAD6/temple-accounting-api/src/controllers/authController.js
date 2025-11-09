@@ -1,6 +1,7 @@
 import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import db from '../config/database.js';
+import { supabase } from '../config/supabase.js';
+import { validateAuthRegistration, validateAuthLogin } from '../utils/validation.js';
 
 const DEFAULT_CATEGORIES = [
   { name: 'ทำบุญ', type: 'income' },
@@ -18,44 +19,76 @@ export const register = async (c) => {
     const { username, email, password, temple_name } = await c.req.json();
 
     // Validate input
-    if (!username || !email || !password || !temple_name) {
-      return c.json({ error: 'Missing required fields' }, 400);
+    const validationErrors = validateAuthRegistration(username, email, password, temple_name);
+    if (validationErrors) {
+      return c.json(
+        { error: 'Validation error', details: validationErrors },
+        400
+      );
     }
 
     // Check if user exists
-    const existingUser = db.prepare(
-      'SELECT id FROM users WHERE username = ? OR email = ?'
-    ).get(username, email);
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .or(`username.eq.${username},email.eq.${email}`)
+      .single();
 
     if (existingUser) {
-      return c.json({ error: 'Username or email already exists' }, 400);
+      return c.json(
+        {
+          error: 'Validation error',
+          details: { email_or_username: 'Username or email already exists' }
+        },
+        400
+      );
     }
 
     // Hash password
     const hashedPassword = await bcryptjs.hash(password, 10);
 
     // Insert user
-    const stmt = db.prepare(
-      'INSERT INTO users (username, email, password, temple_name) VALUES (?, ?, ?, ?)'
-    );
-    const result = stmt.run(username, email, hashedPassword, temple_name);
-    const userId = result.lastInsertRowid;
+    const { data: newUser, error: userError } = await supabase
+      .from('users')
+      .insert([{
+        username,
+        email,
+        password: hashedPassword,
+        temple_name
+      }])
+      .select()
+      .single();
+
+    if (userError) {
+      throw userError;
+    }
+
+    const userId = newUser.id;
 
     // Create default categories for this user
-    const catStmt = db.prepare(
-      'INSERT INTO categories (user_id, name, type, is_default) VALUES (?, ?, ?, ?)'
-    );
-    for (const cat of DEFAULT_CATEGORIES) {
-      catStmt.run(userId, cat.name, cat.type, 1);
+    const categoriesToInsert = DEFAULT_CATEGORIES.map(cat => ({
+      user_id: userId,
+      name: cat.name,
+      type: cat.type,
+      is_default: true
+    }));
+
+    const { error: catError } = await supabase
+      .from('categories')
+      .insert(categoriesToInsert);
+
+    if (catError) {
+      console.error('Error creating categories:', catError);
+      // Don't fail registration if categories fail
     }
 
     return c.json({
       message: 'User registered successfully',
       user: {
         id: userId,
-        username: username,
-        email: email,
-        temple_name: temple_name
+        username: newUser.username,
+        email: newUser.email,
+        temple_name: newUser.temple_name
       }
     }, 201);
   } catch (error) {
@@ -66,21 +99,39 @@ export const register = async (c) => {
 
 export const login = async (c) => {
   try {
-    const { username, password } = await c.req.json();
+    const body = await c.req.json();
+    const { username, email, password } = body;
+
+    // Accept either username or email for login
+    const identifier = username || email;
 
     // Validate input
-    if (!username || !password) {
-      return c.json({ error: 'Username and password are required' }, 400);
+    const validationErrors = validateAuthLogin(identifier || '', password);
+    if (validationErrors) {
+      return c.json(
+        { error: 'Validation error', details: validationErrors },
+        400
+      );
     }
 
     // Find user
-    const user = db.prepare(
-      'SELECT id, username, email, temple_name, password FROM users WHERE username = ?'
-    ).get(username);
+    let query = supabase
+      .from('users')
+      .select('id, username, email, temple_name, password');
 
-    if (!user) {
+    if (email) {
+      query = query.eq('email', email);
+    } else {
+      query = query.eq('username', username);
+    }
+
+    const { data: users } = await query;
+
+    if (!users || users.length === 0) {
       return c.json({ error: 'Invalid credentials' }, 401);
     }
+
+    const user = users[0];
 
     // Verify password
     const isPasswordValid = await bcryptjs.compare(password, user.password);
