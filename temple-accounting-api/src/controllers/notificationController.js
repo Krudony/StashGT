@@ -1,5 +1,4 @@
-import db from '../config/database.js';
-import { dbHelpers } from '../utils/dbHelpers.js';
+import { supabase } from '../config/supabase.js';
 
 export const getNotifications = async (c) => {
   try {
@@ -7,12 +6,27 @@ export const getNotifications = async (c) => {
     const limit = parseInt(c.req.query('limit')) || 20;
     const offset = parseInt(c.req.query('offset')) || 0;
 
-    const notifications = dbHelpers.getNotifications(db, userId, limit, offset);
-    const countResult = dbHelpers.countNotifications(db, userId);
+    // Get notifications with pagination
+    const { data: notifications, error: notificationsError } = await supabase
+      .from('notifications')
+      .select('id, message, type, is_read, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (notificationsError) throw notificationsError;
+
+    // Get total count
+    const { count, error: countError } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    if (countError) throw countError;
 
     return c.json({
-      notifications,
-      total: countResult.total,
+      notifications: notifications || [],
+      total: count || 0,
       limit,
       offset
     });
@@ -27,21 +41,32 @@ export const markAsRead = async (c) => {
     const userId = c.get('userId');
     const id = c.req.param('id');
 
-    const notification = db.prepare(
-      'SELECT id, message, type, is_read, created_at FROM notifications WHERE id = ? AND user_id = ?'
-    ).get(id, userId);
+    // First, check if notification exists and belongs to user
+    const { data: notification, error: fetchError } = await supabase
+      .from('notifications')
+      .select('id, message, type, is_read, created_at')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
 
-    if (!notification) {
+    if (fetchError || !notification) {
       return c.json({ error: 'Notification not found' }, 404);
     }
 
-    dbHelpers.markNotificationAsRead(db, id, userId);
+    // Update notification to mark as read
+    const { error: updateError } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', id)
+      .eq('user_id', userId);
+
+    if (updateError) throw updateError;
 
     return c.json({
       id,
       message: notification.message,
       type: notification.type,
-      is_read: 1,
+      is_read: true,
       created_at: notification.created_at
     });
   } catch (error) {
@@ -54,7 +79,12 @@ export const markAllAsRead = async (c) => {
   try {
     const userId = c.get('userId');
 
-    db.prepare('UPDATE notifications SET is_read = 1 WHERE user_id = ?').run(userId);
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', userId);
+
+    if (error) throw error;
 
     return c.json({ message: 'All notifications marked as read' });
   } catch (error) {
@@ -68,11 +98,23 @@ export const deleteNotification = async (c) => {
     const userId = c.get('userId');
     const id = c.req.param('id');
 
-    const result = db.prepare(
-      'DELETE FROM notifications WHERE id = ? AND user_id = ?'
-    ).run(id, userId);
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
 
-    if (result.changes === 0) {
+    if (error) throw error;
+
+    // Check if any rows were affected by trying to fetch the deleted notification
+    const { data: checkDeleted } = await supabase
+      .from('notifications')
+      .select('id')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
+
+    if (checkDeleted) {
       return c.json({ error: 'Notification not found' }, 404);
     }
 

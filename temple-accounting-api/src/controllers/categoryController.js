@@ -1,11 +1,22 @@
-import db from '../config/database.js';
-import { dbHelpers } from '../utils/dbHelpers.js';
+import { supabase } from '../config/supabase.js';
+import { validateCreateCategory, validators } from '../utils/validation.js';
 
 export const getCategories = async (c) => {
   try {
     const userId = c.get('userId');
-    const categories = dbHelpers.getCategories(db, userId);
-    return c.json(categories);
+
+    const { data, error } = await supabase
+      .from('categories')
+      .select('id, name, type, is_default, created_at')
+      .eq('user_id', userId)
+      .order('type', { ascending: true })
+      .order('name', { ascending: true });
+
+    if (error) {
+      throw error;
+    }
+
+    return c.json(data);
   } catch (error) {
     console.error('Get categories error:', error);
     return c.json({ error: error.message }, 500);
@@ -18,30 +29,52 @@ export const createCategory = async (c) => {
     const { name, type } = await c.req.json();
 
     // Validate input
-    if (!name || !type) {
-      return c.json({ error: 'Missing required fields' }, 400);
+    const validationErrors = validateCreateCategory(name, type);
+    if (validationErrors) {
+      return c.json(
+        { error: 'Validation error', details: validationErrors },
+        400
+      );
     }
 
-    if (!['income', 'expense'].includes(type)) {
-      return c.json({ error: 'Invalid type' }, 400);
+    // Check if category already exists
+    const { data: existingCategory, error: checkError } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', name)
+      .eq('type', type)
+      .single();
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      // PGRST116 is "no rows returned" which is what we want
+      throw checkError;
     }
 
-    // Check if category already exists (dbHelpers handles this via UNIQUE constraint)
-    try {
-      const result = dbHelpers.createCategory(db, userId, name, type);
-      return c.json({
-        id: result.lastInsertRowid,
+    if (existingCategory) {
+      return c.json(
+        { error: 'Validation error', details: { name: 'Category already exists for this type' } },
+        400
+      );
+    }
+
+    // Insert new category
+    const { data, error } = await supabase
+      .from('categories')
+      .insert({
+        user_id: userId,
         name,
         type,
-        is_default: 0,
-        created_at: new Date().toISOString()
-      }, 201);
-    } catch (err) {
-      if (err.message.includes('UNIQUE')) {
-        return c.json({ error: 'Category already exists' }, 400);
-      }
-      throw err;
+        is_default: false
+      })
+      .select('id, name, type, is_default, created_at')
+      .single();
+
+    if (error) {
+      throw error;
     }
+
+    return c.json(data, 201);
   } catch (error) {
     console.error('Create category error:', error);
     return c.json({ error: error.message }, 500);
@@ -54,33 +87,54 @@ export const updateCategory = async (c) => {
     const id = c.req.param('id');
     const { name } = await c.req.json();
 
-    if (!name) {
-      return c.json({ error: 'Name is required' }, 400);
+    // Validate name
+    if (!validators.validateCategoryName(name)) {
+      return c.json(
+        { error: 'Validation error', details: { name: 'Category name is required (1-100 characters)' } },
+        400
+      );
     }
 
     // Verify category belongs to user and check if default
-    const category = db.prepare(
-      'SELECT id, is_default FROM categories WHERE id = ? AND user_id = ?'
-    ).get(id, userId);
+    const { data: category, error: fetchError } = await supabase
+      .from('categories')
+      .select('id, is_default, type')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
 
-    if (!category) {
-      return c.json({ error: 'Category not found' }, 404);
+    if (fetchError || !category) {
+      return c.json(
+        { error: 'Validation error', details: { id: 'Category not found' } },
+        404
+      );
     }
 
     // Cannot edit default categories
     if (category.is_default) {
-      return c.json({ error: 'Cannot edit default categories' }, 400);
+      return c.json(
+        { error: 'Validation error', details: { name: 'Cannot edit default categories' } },
+        400
+      );
     }
 
-    dbHelpers.updateCategory(db, id, userId, name);
+    // Update category
+    const { data, error } = await supabase
+      .from('categories')
+      .update({
+        name,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select('id, name, type, is_default, updated_at')
+      .single();
 
-    return c.json({
-      id,
-      name,
-      type: db.prepare('SELECT type FROM categories WHERE id = ?').get(id).type,
-      is_default: 0,
-      updated_at: new Date().toISOString()
-    });
+    if (error) {
+      throw error;
+    }
+
+    return c.json(data);
   } catch (error) {
     console.error('Update category error:', error);
     return c.json({ error: error.message }, 500);
@@ -93,11 +147,14 @@ export const deleteCategory = async (c) => {
     const id = c.req.param('id');
 
     // Verify category belongs to user and check if default
-    const category = db.prepare(
-      'SELECT id, is_default FROM categories WHERE id = ? AND user_id = ?'
-    ).get(id, userId);
+    const { data: category, error: fetchError } = await supabase
+      .from('categories')
+      .select('id, is_default')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
 
-    if (!category) {
+    if (fetchError || !category) {
       return c.json({ error: 'Category not found' }, 404);
     }
 
@@ -107,15 +164,29 @@ export const deleteCategory = async (c) => {
     }
 
     // Check if category has transactions
-    const transactionCount = db.prepare(
-      'SELECT COUNT(*) as count FROM transactions WHERE category_id = ?'
-    ).get(id);
+    const { count, error: countError } = await supabase
+      .from('transactions')
+      .select('*', { count: 'exact', head: true })
+      .eq('category_id', id);
 
-    if (transactionCount.count > 0) {
+    if (countError) {
+      throw countError;
+    }
+
+    if (count > 0) {
       return c.json({ error: 'Cannot delete category with transactions' }, 400);
     }
 
-    dbHelpers.deleteCategory(db, id, userId);
+    // Delete category
+    const { error: deleteError } = await supabase
+      .from('categories')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
+
+    if (deleteError) {
+      throw deleteError;
+    }
 
     return c.json({ message: 'Category deleted successfully' });
   } catch (error) {

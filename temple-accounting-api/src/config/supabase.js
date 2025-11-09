@@ -1,10 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
 
+dotenv.config();
+
+// Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const supabaseKey = process.env.SUPABASE_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables: SUPABASE_URL and SUPABASE_ANON_KEY');
+if (!supabaseUrl || !supabaseKey) {
+  console.warn('⚠️ Supabase credentials not configured. Using SQLite fallback.');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = supabaseUrl && supabaseKey
+  ? createClient(supabaseUrl, supabaseKey)
+  : null;
+
+export const isSupabaseEnabled = !!supabase;

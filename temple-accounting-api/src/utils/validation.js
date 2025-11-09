@@ -1,21 +1,108 @@
-// Authentication validation
-export const validateAuthRegistration = (username, email, password, temple_name) => {
+/**
+ * Validation utilities for API endpoints
+ */
+
+export const validators = {
+  // User validation
+  validateUsername: (username) => {
+    if (!username || typeof username !== 'string') return false;
+    return username.length >= 3 && username.length <= 50;
+  },
+
+  validateEmail: (email) => {
+    if (!email || typeof email !== 'string') return false;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  },
+
+  validatePassword: (password) => {
+    if (!password || typeof password !== 'string') return false;
+    // At least 6 characters
+    return password.length >= 6;
+  },
+
+  validateTempleName: (templeName) => {
+    if (!templeName || typeof templeName !== 'string') return false;
+    return templeName.length >= 1 && templeName.length <= 100;
+  },
+
+  // Transaction validation
+  validateAmount: (amount) => {
+    const num = parseFloat(amount);
+    return !isNaN(num) && num > 0 && num <= 999999999.99;
+  },
+
+  validateType: (type) => {
+    return type === 'income' || type === 'expense';
+  },
+
+  validateDate: (date) => {
+    if (!date || typeof date !== 'string') return false;
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(date)) return false;
+    // Check if it's a valid date
+    const dateObj = new Date(date);
+    return dateObj instanceof Date && !isNaN(dateObj);
+  },
+
+  validateDescription: (description) => {
+    if (!description) return true; // Optional
+    return typeof description === 'string' && description.length <= 500;
+  },
+
+  validateCategoryId: (categoryId) => {
+    const num = parseInt(categoryId);
+    return !isNaN(num) && num > 0;
+  },
+
+  // Category validation
+  validateCategoryName: (name) => {
+    if (!name || typeof name !== 'string') return false;
+    return name.length >= 1 && name.length <= 100;
+  },
+
+  // Month validation
+  validateMonth: (month) => {
+    if (!month || typeof month !== 'string') return false;
+    const monthRegex = /^\d{4}-\d{2}$/;
+    if (!monthRegex.test(month)) return false;
+    // Validate month range
+    const parts = month.split('-');
+    const monthNum = parseInt(parts[1]);
+    return monthNum >= 1 && monthNum <= 12;
+  }
+};
+
+/**
+ * Validation error builder
+ */
+export const validationError = (field, message) => {
+  return {
+    error: 'Validation error',
+    details: { [field]: message }
+  };
+};
+
+/**
+ * Multi-field validation
+ */
+export const validateAuthRegistration = (username, email, password, templeName) => {
   const errors = {};
 
-  if (!username || username.trim().length < 3) {
-    errors.username = 'Username must be at least 3 characters long';
+  if (!validators.validateUsername(username)) {
+    errors.username = 'Username must be 3-50 characters';
   }
 
-  if (!email || !isValidEmail(email)) {
-    errors.email = 'Please provide a valid email address';
+  if (!validators.validateEmail(email)) {
+    errors.email = 'Invalid email format';
   }
 
-  if (!password || password.length < 6) {
-    errors.password = 'Password must be at least 6 characters long';
+  if (!validators.validatePassword(password)) {
+    errors.password = 'Password must be at least 6 characters';
   }
 
-  if (!temple_name || temple_name.trim().length === 0) {
-    errors.temple_name = 'Temple name is required';
+  if (!validators.validateTempleName(templeName)) {
+    errors.temple_name = 'Temple name is required (1-100 characters)';
   }
 
   return Object.keys(errors).length > 0 ? errors : null;
@@ -24,91 +111,54 @@ export const validateAuthRegistration = (username, email, password, temple_name)
 export const validateAuthLogin = (identifier, password) => {
   const errors = {};
 
-  if (!identifier || identifier.trim().length === 0) {
-    errors.identifier = 'Email or username is required';
+  // identifier can be either username or email
+  if (!identifier || typeof identifier !== 'string' || identifier.length === 0) {
+    errors.identifier = 'Username or email is required';
   }
 
-  if (!password || password.length === 0) {
+  if (!password) {
     errors.password = 'Password is required';
   }
 
   return Object.keys(errors).length > 0 ? errors : null;
 };
 
-// Category validation
-export const validateCreateCategory = (name, type) => {
+export const validateCreateTransaction = (type, categoryId, amount, date, description) => {
   const errors = {};
 
-  if (!name || name.trim().length === 0) {
-    errors.name = 'Category name is required';
+  if (!validators.validateType(type)) {
+    errors.type = 'Type must be "income" or "expense"';
   }
 
-  if (!type || !['income', 'expense'].includes(type)) {
-    errors.type = 'Type must be either "income" or "expense"';
+  if (!validators.validateCategoryId(categoryId)) {
+    errors.category_id = 'Invalid category ID';
   }
 
-  return Object.keys(errors).length > 0 ? errors : null;
-};
-
-// Transaction validation
-export const validateCreateTransaction = (type, category_id, amount, date, description) => {
-  const errors = {};
-
-  if (!type || !['income', 'expense'].includes(type)) {
-    errors.type = 'Type must be either "income" or "expense"';
-  }
-
-  if (!category_id) {
-    errors.category_id = 'Category is required';
-  }
-
-  if (!amount || isNaN(amount) || parseFloat(amount) <= 0) {
+  if (!validators.validateAmount(amount)) {
     errors.amount = 'Amount must be a positive number';
   }
 
-  if (!date || !isValidDate(date)) {
-    errors.date = 'Please provide a valid date (YYYY-MM-DD format)';
+  if (!validators.validateDate(date)) {
+    errors.date = 'Invalid date format (use YYYY-MM-DD)';
   }
 
-  if (description && typeof description !== 'string') {
-    errors.description = 'Description must be a string';
+  if (!validators.validateDescription(description)) {
+    errors.description = 'Description must be 0-500 characters';
   }
 
   return Object.keys(errors).length > 0 ? errors : null;
 };
 
-// Utility validators object for backward compatibility
-export const validators = {
-  validateCategoryName: (name) => {
-    return name && typeof name === 'string' && name.trim().length > 0;
-  },
+export const validateCreateCategory = (name, type) => {
+  const errors = {};
 
-  validateCategoryType: (type) => {
-    return ['income', 'expense'].includes(type);
-  },
-
-  validateAmount: (amount) => {
-    return !isNaN(amount) && parseFloat(amount) > 0;
-  },
-
-  validateDate: (date) => {
-    return isValidDate(date);
+  if (!validators.validateCategoryName(name)) {
+    errors.name = 'Category name is required (1-100 characters)';
   }
+
+  if (!validators.validateType(type)) {
+    errors.type = 'Type must be "income" or "expense"';
+  }
+
+  return Object.keys(errors).length > 0 ? errors : null;
 };
-
-// Helper functions
-function isValidEmail(email) {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
-
-function isValidDate(dateString) {
-  // Check if it's a valid date format (YYYY-MM-DD)
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-  if (!dateRegex.test(dateString)) {
-    return false;
-  }
-
-  const date = new Date(dateString + 'T00:00:00Z');
-  return date instanceof Date && !isNaN(date);
-}
